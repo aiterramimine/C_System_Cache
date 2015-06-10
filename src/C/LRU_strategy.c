@@ -1,0 +1,83 @@
+/*
+ *	LRU strategy
+ */
+ 
+ #include <assert.h>
+
+#include "strategy.h"
+#include "low_cache.h"
+#include "cache_list.h"
+
+ 
+struct Cache_List *list;
+ 
+ //! Creation et initialisation de la stratégie (invoqué par la création de cache).
+void *Strategy_Create(struct Cache *pcache)
+{
+	list = Cache_List_Create();
+	return list;
+}
+
+//! Fermeture de la stratégie.
+void Strategy_Close(struct Cache *pcache)
+{
+	Cache_List_Delete(list);
+}
+
+//! Fonction "réflexe" lors de l'invalidation du cache.
+void Strategy_Invalidate(struct Cache *pcache){
+	
+}
+
+//! Algorithme de remplacement de bloc.
+struct Cache_Block_Header *Strategy_Replace_Block(struct Cache *pcache)
+{
+    struct Cache_Block_Header *pbh;
+    struct Cache_List *tmp_list = list; 
+
+    /* On cherche d'abord un bloc invalide */
+    if ((pbh = Get_Free_Block(pcache)) != NULL){
+		Cache_List_Move_To_End(list, pbh);
+		return pbh;
+	}
+    while(tmp_list)
+    {
+		pbh = tmp_list->pheader;
+		
+		if(!pbh)
+			break;
+		
+		if(pbh && !(VALID & pbh->flags))
+		{			
+			Cache_List_Move_To_End(list, pbh);
+			//printf("Strategy_Replace_Block - END\n");
+			return pbh;
+		}	
+		tmp_list = tmp_list->prev;
+		//printf("Strategy_Replace_Block - NEXT\n");
+	}
+	
+    /* Pas de bloc invalide trouvé, on prend le 1er	*/
+    pbh = Cache_List_Remove_First(list);
+    Cache_List_Move_To_End(list, pbh);
+    return pbh;
+}
+
+//! Fonction "réflexe" lors de la lecture.
+void Strategy_Read(struct Cache *pcache, struct Cache_Block_Header *pb)
+{
+	Cache_List_Move_To_End(list, pb);
+}
+
+//! Fonction "réflexe" lors de l'écriture.
+void Strategy_Write(struct Cache *pcache, struct Cache_Block_Header *pb)
+{
+	Cache_List_Move_To_End(list, pb);
+}
+
+//! Identification de la stratégie.
+char *Strategy_Name()
+{
+	return "LRU";
+}
+

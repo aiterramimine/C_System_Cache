@@ -3,12 +3,17 @@
  * 
  * [NOT TESTED]
  */
+ 
+ #include "low_cache.h"
+ #include "strategy.h"
 
 struct Cache_Block_Header *Get_Free_Block(struct Cache *pcache)
 {
 	struct Cache_Block_Header *ret = pcache->pfree;	
 	
-	for(Cache_Block_Header *free = pcache->headers; free < (pcache->headers + nblocks); free++)
+	pcache->pfree = NULL;
+	
+	for(Cache_Block_Header *free = pcache->headers; free < (pcache->headers + pcache->nblocks); free++)
 	{
 		if(!(free->flags & VALID) && free != ret)
 		{
